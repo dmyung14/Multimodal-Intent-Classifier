@@ -1,0 +1,11 @@
+# Pip fallback if you prefer not to use conda for the ML libraries.
+# Milestone 0 essentials:
+pandas
+numpy
+scikit-learn
+matplotlib
+# Milestone 1+ (uncomment when ready):
+# torch
+# transformers
+# datasets
+# accelerate

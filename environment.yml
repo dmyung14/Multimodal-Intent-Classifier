@@ -1,0 +1,24 @@
+# Conda environment for the Multimodal Intent Inference project.
+# Create it with:   conda env create -f environment.yml
+# Activate it with: conda activate mmi
+name: mmi
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  # --- Milestone 0 needs only these (lightweight, CPU, instant) ---
+  - pandas
+  - numpy
+  - scikit-learn
+  - matplotlib
+  - jupyter
+  # ffmpeg is for pulling audio out of video clips later (Milestone 2)
+  - ffmpeg
+  - pip
+  # --- Milestone 1+ (heavier). Uncomment when you're ready, or just
+  #     `pip install` them later. They download a few hundred MB. ---
+  - pip:
+    # - torch
+    # - transformers
+    # - datasets
+    # - accelerate

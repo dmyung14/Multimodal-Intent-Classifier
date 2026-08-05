@@ -1,0 +1,97 @@
+text,intent
+"Hey there, good to see you again!",greeting
+"Hi, how's it going?",greeting
+"Good morning everyone.",greeting
+"Hello, nice to meet you.",greeting
+"Hey, long time no see!",greeting
+"Morning! Ready for today?",greeting
+"Hi all, hope you're doing well.",greeting
+"Hey, welcome back.",greeting
+"Good to see you, come on in.",greeting
+"Hello there, take a seat.",greeting
+"Hiya, what's new with you?",greeting
+"Greetings, glad you could make it.",greeting
+"Thank you so much for your help.",thank
+"I really appreciate you doing this.",thank
+"Thanks a lot, that means a lot to me.",thank
+"I can't thank you enough for this.",thank
+"Cheers, you really saved me there.",thank
+"Thank you, I owe you one.",thank
+"I'm so grateful for your support.",thank
+"Many thanks for sorting that out.",thank
+"That was incredibly kind, thank you.",thank
+"Appreciate it, seriously.",thank
+"Thanks for taking the time to explain.",thank
+"I just wanted to say thanks for everything.",thank
+"I'm really sorry about that.",apologize
+"My apologies, that was my mistake.",apologize
+"Sorry, I didn't mean to upset you.",apologize
+"I apologize for the confusion.",apologize
+"That's on me, I'm sorry.",apologize
+"Please forgive me, I messed up.",apologize
+"I'm sorry for being late again.",apologize
+"Apologies for the delay in getting back.",apologize
+"I feel terrible about what happened, sorry.",apologize
+"Sorry, I should have handled that better.",apologize
+"My bad, I'll fix it right away.",apologize
+"I owe you an apology for earlier.",apologize
+"Yes, I completely agree with you.",agree
+"That's a good point, I think you're right.",agree
+"Absolutely, that makes sense to me.",agree
+"I'm on board with that plan.",agree
+"Exactly, that's what I was thinking too.",agree
+"Sure, that works for me.",agree
+"Agreed, let's go with your idea.",agree
+"You're right, I hadn't thought of it that way.",agree
+"I second that, it's the best option.",agree
+"Fair enough, I'll go along with it.",agree
+"Yeah, I can get behind that.",agree
+"That's exactly right, no argument here.",agree
+"No, I don't think that's correct.",disagree
+"I'm not sure I agree with that.",disagree
+"Actually, I see it differently.",disagree
+"I have to disagree with you there.",disagree
+"That doesn't sound right to me.",disagree
+"I'm not convinced that's the best way.",disagree
+"Sorry, but I can't agree with that.",disagree
+"I think you're mistaken about this.",disagree
+"That's not how I'd put it at all.",disagree
+"I beg to differ on that point.",disagree
+"No way, that just isn't true.",disagree
+"I really don't buy that argument.",disagree
+"This is completely unacceptable.",complain
+"I'm really unhappy with how this turned out.",complain
+"This is the third time this has happened.",complain
+"I've been waiting for over an hour, this is ridiculous.",complain
+"The service here has been terrible.",complain
+"I'm fed up with all these delays.",complain
+"This product broke after just one day.",complain
+"I can't believe you forgot again.",complain
+"Honestly, this is not good enough.",complain
+"I'm frustrated that nobody warned me.",complain
+"The room was dirty and the staff were rude.",complain
+"This is a complete waste of my time.",complain
+"Could you please pass me the report?",request
+"Can you help me move this table?",request
+"Would you mind closing the door?",request
+"Please send me the file when you can.",request
+"Can I get a glass of water?",request
+"Could you turn the volume down a bit?",request
+"Would you be able to review this for me?",request
+"Please let me know by tomorrow.",request
+"Can you give me a hand with this?",request
+"I'd like you to double-check the numbers.",request
+"Could you wait for me at the entrance?",request
+"Please remind me to call them later.",request
+"Don't worry, everything is going to be fine.",reassure
+"It's okay, you did your best.",reassure
+"Take it easy, we'll figure this out together.",reassure
+"There's no need to panic, we have time.",reassure
+"You've got this, I believe in you.",reassure
+"Relax, it's not as bad as it seems.",reassure
+"I'm here for you, whatever happens.",reassure
+"It'll all work out, trust me.",reassure
+"No pressure, take all the time you need.",reassure
+"Everything's under control, don't stress.",reassure
+"You're doing great, keep going.",reassure
+"Calm down, we can handle this.",reassure

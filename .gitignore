@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+env/
+
+# Big things we don't commit
+models/*
+!models/.gitkeep
+data/*
+!data/.gitkeep
+!data/sample_intents.csv
+results/*
+!results/.gitkeep
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+
+CLAUDE.md
