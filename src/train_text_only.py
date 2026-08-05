@@ -211,7 +211,7 @@ def train_transformer(train, val):
     return HFWrapper()
 
 
-def evaluate(model, test):
+def evaluate(model, test, model_name="sklearn"):
     """
     Judge the model on the held-out test set and print the numbers that
     actually matter. Accuracy alone can lie when classes are imbalanced,
@@ -241,7 +241,7 @@ def evaluate(model, test):
         print(name[:11].ljust(12) + "".join(str(v).ljust(9) for v in row))
 
     RESULTS_DIR.mkdir(exist_ok=True)
-    out = RESULTS_DIR / "milestone0_predictions.csv"
+    out = RESULTS_DIR / f"milestone0_predictions_{model_name}.csv"
     pd.DataFrame({"text": test["text"], "true": truth, "predicted": preds}).to_csv(
         out, index=False
     )
@@ -268,7 +268,7 @@ def main():
     else:
         model = train_transformer(train, val)
 
-    evaluate(model, test)
+    evaluate(model, test, model_name=args.model)
 
     print("\n" + "=" * 70)
     print("DONE. You just ran a full ML pipeline. Next questions to ask Claude Code:")
