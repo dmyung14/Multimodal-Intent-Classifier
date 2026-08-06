@@ -28,10 +28,26 @@ real dataset's raw video lives in two places:
   explored — not used here).
 - Hugging Face mirror `THU-IAR/MIntRec` (CC-BY-SA-4.0, the same source
   already used for M1's text data at `data/mintrec/all.tsv`): a `raw_data/`
-  folder containing the **raw `.mp4` clips themselves** — 2,213 files,
-  2.33GB total, organized as `raw_data/{season}/{episode}/{clip}.mp4`
-  (verified, e.g. `raw_data/S04/E01/103.mp4`). This maps exactly onto the
-  `season`/`episode`/`clip` columns already present in `data/mintrec/all.tsv`.
+  folder containing the **raw `.mp4` clips themselves** — organized as
+  `raw_data/{season}/{episode}/{clip}.mp4` (verified, e.g.
+  `raw_data/S04/E01/103.mp4`), mapping onto the `season`/`episode`/`clip`
+  columns already present in `data/mintrec/all.tsv`.
+
+  **Verified counts (via the HF Hub API's full file listing, not the
+  scraped folder-page estimate):** `raw_data/` contains exactly **2,213**
+  `.mp4` files. `data/mintrec/all.tsv` (the paper's published total) has
+  **2,224** rows. Cross-referencing the two: **11 specific `all.tsv` rows
+  have no matching file in this mirror** (all in season S05 — e.g.
+  `S05/E07/96.mp4`, `S05/E15/83.mp4` — verified as genuinely absent, not a
+  naming mismatch; every file that does exist matches exactly one
+  `all.tsv` row, zero orphans). This is a real, small gap in the mirror's
+  upload, not an error in this spec's numbers — `generate_mintrec_multimodal.py`
+  filters `all.tsv` down to only rows with a confirmed matching file
+  *before* sampling or downloading, so it never attempts one of the 11
+  known-missing clips. Total size of the 2,213 available files: measured
+  at ~1.1MB/clip average (cross-checked via the HF folder's displayed
+  total and a direct per-file size sum) — so the `--full` path downloads
+  **2,213 clips, ~2.3GB**, not "all 2,224."
 
 This increment uses the Hugging Face `raw_data/` clips exclusively — same
 license already agreed to for M1, scriptable via `huggingface_hub` instead
@@ -46,13 +62,27 @@ Per this project's established pattern (toy data before real data, small
 before large) and the `CLAUDE.md` rule to confirm before any download over
 ~100MB:
 
-- **Default run: a stratified subset — 5 clips per intent class (100 clips
-  total)**, sampled from the 20 classes in `data/mintrec/all.tsv`. Expected
-  download size: tens of MB (clip lengths average 2.38s per the dataset's
-  published statistics).
-- **`--full` flag: all 2,224 clips (2.33GB).** Not run as part of this
-  increment's default path — a separate, explicit confirmation when the
-  project is ready to scale up, exactly like M1's real-vs-toy staging.
+- **Default run: a stratified subset — 15 clips per intent class (300
+  clips total)**, sampled from the 20 classes in `data/mintrec/all.tsv`
+  (after filtering out the 11 rows with no matching file — see above).
+  Expected download size: **~330MB** at the measured ~1.1MB/clip average.
+
+  15/class is a deliberately verified floor, not a round-number guess: the
+  same stratified `train_test_split` logic this pipeline reuses from
+  M0/M1/M2-increment-1 was tested empirically at several sizes against 20
+  classes. **5/class (100 total) — the original default in an earlier
+  draft of this spec — crashes outright**
+  (`ValueError: The test_size = 15 should be greater or equal to the
+  number of classes = 20`, because the val split's absolute size ends up
+  smaller than the number of classes, making it impossible to stratify).
+  10/class (200 total) works but leaves some classes with only 1 example
+  in val. 15/class (300 total) is the smallest size that's both crash-safe
+  and gives reasonably stable per-class coverage (minimum 3 examples per
+  class in test, 2 in val, empirically confirmed).
+- **`--full` flag: all 2,213 available clips (~2.3GB).** Not run as part
+  of this increment's default path — a separate, explicit confirmation
+  when the project is ready to scale up, exactly like M1's real-vs-toy
+  staging.
 
 ## File scope
 
@@ -77,8 +107,10 @@ then uses `ffmpeg` (already present in the `mmi` conda environment per
 Writes `data/mintrec_multimodal/index.csv` with columns
 `sample_id, text, intent, season, episode, clip, audio_path, frame_dir`
 (`sample_id` built as `{season}_{episode}_{clip}`, e.g. `S04_E01_103`, a
-stable natural key). Selection is a stratified sample (5 rows per `label`
-value) from `data/mintrec/all.tsv` unless `--full` is passed.
+stable natural key). Selection: first filter `data/mintrec/all.tsv` down to
+rows with a confirmed matching `raw_data` file (excludes the 11 known-missing
+rows), then take a stratified sample (15 rows per `label` value, 300 total)
+unless `--full` is passed, in which case all 2,213 available rows are used.
 
 ### `src/extract_mintrec_embeddings.py`
 
@@ -128,7 +160,7 @@ notebooks (`milestone0_text_only.ipynb`, `milestone1_mintrec_text.ipynb`,
 ```
 data/mintrec/all.tsv (existing, from M1)
         |
-        v  (stratified 5-per-class sample, or --full)
+        v  (stratified 15-per-class sample, or --full)
 src/generate_mintrec_multimodal.py
         |  huggingface_hub.hf_hub_download (raw_data/{season}/{episode}/{clip}.mp4)
         |  ffmpeg (audio -> 16kHz mono wav, video -> 5 evenly-spaced jpegs)
@@ -203,7 +235,7 @@ Consistent with this project's "no silent error recovery" rule:
 
 Same run-and-read-output style as M0/M1/M2-increment-1 — no pytest suite:
 
-- Run the generator on the 100-clip subset; spot-check `index.csv` has 100
+- Run the generator on the 300-clip subset; spot-check `index.csv` has 300
   rows, a sample `.wav` file is real mono 16kHz audio (via a quick
   `wave`-module read), a sample frame directory has 5 real JPEG files.
 - Run the embedding step; spot-check a sample `.npz` has `audio` shape
@@ -219,7 +251,7 @@ Same run-and-read-output style as M0/M1/M2-increment-1 — no pytest suite:
 
 - The Google Drive archive and its pre-extracted pickle-format features —
   not used.
-- The full 2,224-clip dataset — available via `--full`, but not run as part
+- The full 2,213-clip dataset — available via `--full`, but not run as part
   of this increment; a separate confirmation when the project is ready to
   scale up.
 - Modifying `src/generate_toy_multimodal.py` or `src/train_multimodal_toy.py`
