@@ -21,23 +21,52 @@ two ideas at once:
 ## A real data-scope problem this milestone surfaces
 
 M2/M3's 300-clip subset was a **stratified sample** (15 clips per intent
-class, drawn from across all 43 episodes) — deliberately *not* contiguous
-runs of dialogue. Dialogue context needs the opposite: complete,
-temporally-ordered runs of utterances within an episode. The M2/M3 dataset
-cannot be reused for this milestone's core capability — a genuinely new,
-differently-selected acquisition is required.
+class, drawn from across all 43 episodes) — so no two clips were ever
+near each other in the same episode. Dialogue context needs the opposite:
+utterances that are at least temporally ordered within one episode. The
+M2/M3 dataset cannot be reused for this milestone's core capability — a
+genuinely new, differently-selected acquisition is required.
 
 **Verified real episode sizes** (queried directly from the same
 `THU-IAR/MIntRec` Hugging Face mirror used since M1/M2): 43 episodes
 total, 2,213 clips, median 42 clips/episode, mean 51.5, ranging from 20
 (`S05/E02`) to 100 (`S05/E15`, `S05/E09`).
 
+> **Correction added after the final whole-branch review.** An earlier
+> version of this spec (and of the M4 notebook) described the 10 selected
+> episodes as giving "complete, contiguous" dialogue. **That was factually
+> wrong and has been corrected throughout.** Those "episode clip counts"
+> are counts of *annotated* clips, not of all clips in the episode.
+> MIntRec annotates only **7.6%–10.7%** of each of these episodes'
+> clips — e.g. `S05/E20` has 53 annotated rows spanning clip numbers 8 to
+> 547. Pooled across all 10 episodes, the median gap between an utterance
+> and the annotated utterance before it is **7 clip numbers**, and only
+> **60 of 502** such pairs (12%) are literally consecutive clips; a full
+> 4-context window spans a median of 39 clip numbers end to end.
+>
+> So a "dialogue window" in this milestone means **"the 4 most recently
+> annotated utterances in the same episode"** — typically several scenes
+> apart, not four consecutive conversational turns. Decision #3's context
+> mechanism is still implemented as described; what changes is the honest
+> description of what that context *is*. `src/train_crossmodal.py` prints
+> these sparsity numbers at run time (STEP 1b) and trains an explicit
+> **"no dialogue context" ablation** (every context position force-masked
+> for training *and* evaluation) to measure whether this kind of context
+> helps at all. Measured over 3 seeds: full model accuracy 0.290 ± 0.023
+> vs. no-context 0.265 ± 0.031 — a gap smaller than the seed-to-seed
+> spread. **Dialogue context as available in this dataset does not show a
+> measurable benefit.** That is a real finding about MIntRec's annotation
+> density, not a bug in the context mechanism, and it is reported as such
+> rather than hidden.
+
 ## Decisions (documented, not asked)
 
-**1. Select 10 complete episodes, ~512 clips total (~560MB), not a
-stratified sample.** Chosen for a mix of season variety (S04/S05/S06 all
-represented, matching M1/M2's existing coverage) and per-episode class
-diversity (13-18 distinct intents present per episode, out of 20 total):
+**1. Select 10 episodes and take every annotated clip in each, ~512 clips
+total (~560MB), not a stratified sample.** Chosen for a mix of season
+variety (S04/S05/S06 all represented, matching M1/M2's existing coverage)
+and per-episode class diversity (13-18 distinct intents present per
+episode, out of 20 total). The clip counts below are **annotated** clips,
+which is only ~8-10% of each episode's clips (see the correction above):
 
 ```
 S04/E16 (57 clips, 14 classes)   S05/E19 (61 clips, 18 classes)   S06/E01 (54 clips, 15 classes)
@@ -63,15 +92,28 @@ consistent but not necessarily chronological ordering," which still
 tests whether a model can use *any* structured neighbor information —
 a smaller, but not zero, claim.
 
-**3. Context window: up to 4 preceding utterances, predict the current
-one.** For utterance *i* in an episode, gather utterances `max(0, i-4)`
-through `i-1` as context (fewer if `i` is near the start of the episode —
-padded with a learned "no context" placeholder, masked out of attention),
-and predict utterance *i*'s intent using both its own features and that
-context. This is the standard "use dialogue history to classify the
-current turn" setup from conversational emotion/intent literature (e.g.
-DialogueRNN-style setups) — not full-episode context, which would be
-larger and slower for a first cross-modal-transformer milestone.
+**3. Context window: up to 4 preceding annotated utterances, predict the
+current one.** For annotated utterance *i* in an episode, gather annotated
+utterances `max(0, i-4)` through `i-1` as context (fewer if `i` is near the
+start of the episode), and predict utterance *i*'s intent using both its own
+features and that context. This is the standard "use dialogue history to
+classify the current turn" setup from conversational emotion/intent
+literature (e.g. DialogueRNN-style setups) — not full-episode context, which
+would be larger and slower for a first cross-modal-transformer milestone.
+See the correction above for what "preceding" actually means at MIntRec's
+annotation density.
+
+*Implementation note (corrected after review — the spec originally said a
+"learned 'no context' placeholder").* Missing context positions are
+**zero-filled and marked in a boolean padding mask** which
+`nn.TransformerEncoder`'s `src_key_padding_mask` uses to exclude them from
+attention entirely. No learned placeholder embedding is used, and none is
+needed: a masked position contributes nothing to attention, so whatever
+value sits in its slot is irrelevant. This is simpler than a learned
+placeholder and strictly less to get wrong — the code is correct as
+written and the spec text was the thing that needed fixing. It also turns
+out to be the mechanism the "no dialogue context" ablation reuses (force
+every context position to masked), at zero model-code cost.
 
 **4. Split by episode, not by utterance — prevents context leakage.**
 If utterance 50's context (utterances 46-49) could land in a different
@@ -98,13 +140,33 @@ as M3's MISA simplifications — chosen because implementing and debugging
 this milestone's learning goal (cross-modal attention exists and does
 something different from MISA's self-attention-over-fixed-reps) requires.
 
-**6. Reuse M2's frozen encoders (`wav2vec2-base`, `ResNet18`), same
-embedding extraction approach — only the clip *selection* changes.** No
-new encoder work; `src/extract_mintrec_embeddings.py`'s logic is reused
-(as a library import, not copy-pasted) for the newly selected clips. Any
-clip already embedded from M2/M3's run is skipped (idempotent, same as
-before) — a handful of the 512 clips may already overlap with the earlier
-300-clip sample by chance, saving a little redundant work.
+**6. Reuse M2's frozen encoders (`wav2vec2-base`, `ResNet18`) — only the
+clip *selection* and the output format change.** No new encoder work: the
+same two frozen models, loaded the same way.
+
+*Corrected after review — this decision made two claims that turned out
+not to hold, and the spec text is what's wrong here, not the code:*
+
+- **"Reused as a library import, not copy-pasted."** `src/extract_dialogue_embeddings.py`
+  in fact **duplicates M2's helper functions with modifications** rather
+  than importing them. That was the pragmatic choice once decision #7
+  landed: M2's helpers pool audio to a single `(768,)` vector and average
+  the 5 frames to a single `(512,)` vector, while M4 needs `(8, 768)` and
+  `(5, 512)` sequences. Importing them would have meant either changing
+  M2's already-reviewed, working functions (risking M2/M3's reproducibility)
+  or adding shape-switching flags to them. Duplicating ~40 lines of glue
+  and keeping M2 frozen was the smaller risk. Left as-is deliberately;
+  refactoring it now would be a real code change with its own risk for no
+  behavioural gain.
+- **"Clips already embedded in M2/M3 are skipped, saving a little redundant
+  work."** This is **impossible** and no such skipping happens. M4 writes a
+  different embedding *format* (sequence-level `(8, 768)` / `(5, 512)`, per
+  decision #7) to a different *directory* (`data/dialogue/embeddings/`, not
+  `data/mintrec_multimodal/embeddings/`). An M2/M3 embedding cannot satisfy
+  an M4 lookup, so there is no cross-milestone reuse to be had. The script
+  *is* idempotent within M4 — re-running skips `.npz` files it has already
+  written to `data/dialogue/embeddings/` — which is the useful half of the
+  original claim.
 
 **7. Sequence-level features, not just pooled ones, for the transformer's
 cross-attention to operate over.** MISA operated on M2's single pooled
@@ -193,11 +255,25 @@ No pytest suite (project convention).
   produce correctly-shaped logits and a finite loss.
 - `train_crossmodal.py`: run it, confirm training loss decreases, report
   real accuracy/macro-F1 against M0/M2/M3 — honestly, whatever the number
-  is. Given M3's final review specifically flagged the risk of crediting
-  the wrong architectural change for an accuracy shift, this script
-  should also report a plain "self-attention only, no cross-modal
-  attention" ablation variant alongside the full model, so this
-  milestone doesn't repeat that mistake.
+  is, and **always alongside the test split's trivial majority-class
+  baseline** (0.224 here, because M4's test split is class-imbalanced,
+  unlike M3's perfectly balanced one; comparing raw accuracies across the
+  two milestones without that normalization is misleading). Given M3's
+  final review specifically flagged the risk of crediting the wrong
+  architectural change for an accuracy shift, and given this milestone
+  changes *two* things at once (cross-modal attention **and** dialogue
+  context), the script trains **three** variants on the identical data
+  and split, over several seeds:
+  1. full — cross-modal attention + dialogue context
+  2. no cross-attention — cross-attention replaced with mean-pooling
+  3. no dialogue context — every context position force-masked, for
+     training *and* evaluation (a train/test-matched condition, not a
+     context-trained model evaluated without context)
+
+  Macro-F1 is computed with an explicit `labels=` argument everywhere so
+  its denominator is always all 20 intents, not whatever subset a given
+  run happens to predict; the confusion matrix likewise uses the full
+  20-class label set, matching M3's effective convention.
 - Notebook: execute top-to-bottom, zero errors.
 
 ## Explicitly out of scope

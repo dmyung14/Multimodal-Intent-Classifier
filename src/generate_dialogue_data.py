@@ -1,21 +1,35 @@
 """
-Milestone 4: acquire real MIntRec dialogue data (complete episodes) and
+Milestone 4: acquire all annotated MIntRec clips from 10 episodes and
 build context windows for dialogue-aware intent classification.
 =================================================================
 GOAL OF THIS FILE
     Milestones 2-3 used a STRATIFIED SAMPLE of clips (15 per intent class,
-    drawn from across all 43 episodes) -- deliberately not contiguous
-    dialogue. That's the wrong shape of data for THIS milestone: dialogue
-    context needs complete, temporally-ordered runs of utterances within
-    an episode, so a model can look at what was said just before the
-    utterance it's trying to classify.
+    drawn from across all 43 episodes) -- so no two clips were ever near
+    each other in the same episode. That's the wrong shape of data for
+    THIS milestone: dialogue context needs utterances that are at least
+    temporally ordered within one episode, so a model can look at what
+    came before the utterance it's trying to classify.
 
-    This file downloads 10 COMPLETE episodes (~512 clips total) instead of
-    a stratified sample, and builds a "dialogue window" per utterance: its
-    own clip plus up to 4 preceding clips from the same episode, ordered
-    by clip number (used here as a proxy for chronological order -- see
+    This file downloads EVERY ANNOTATED CLIP from 10 episodes (~512 clips
+    total) instead of a stratified sample, and builds a "dialogue window"
+    per utterance: its own clip plus up to 4 preceding clips from the same
+    episode, ordered by clip number (used here as a proxy for
+    chronological order -- see
     docs/superpowers/specs/2026-08-06-milestone4-crossmodal-dialogue-design.md
     for why, and the caveat that this is an unverified assumption).
+
+    IMPORTANT, MEASURED CAVEAT -- this is NOT contiguous dialogue.
+    MIntRec only annotates a small fraction of each episode's clips: for
+    the 10 episodes selected here, 7.6%-10.7% coverage (e.g. S05/E20 has
+    53 annotated rows spanning clip numbers 8 to 547). Pooled across all
+    10 episodes the median gap between an utterance and the annotated
+    utterance before it is 7 clip numbers, and only 60 of 502 such pairs
+    (12%) are literally consecutive clips. A "dialogue window" here
+    therefore means "the 4 most recently ANNOTATED utterances in the same
+    episode" -- typically several scenes apart, not four consecutive
+    conversational turns. `src/train_crossmodal.py` prints these numbers
+    at run time (STEP 1b) and trains an explicit "no dialogue context"
+    ablation to test whether this kind of context helps at all.
 
 HOW TO RUN
     conda activate mmi
@@ -27,9 +41,10 @@ HOW TO RUN
     already-downloaded clips are skipped.
 
 TERMS YOU'LL SEE
-    - dialogue window : the current utterance plus a handful of the
-                          utterances immediately before it in the same
-                          conversation
+    - dialogue window : the current utterance plus a handful of the most
+                          recently annotated utterances before it in the
+                          same episode (see the caveat above -- "before
+                          it" does not mean "immediately before it")
     - context          : the "before" utterances in a dialogue window --
                           information the model gets to see but isn't
                           being asked to classify
@@ -53,9 +68,11 @@ AUDIO_SAMPLE_RATE = 16000
 N_FRAMES = 5
 CONTEXT_SIZE = 4
 
-# 10 complete episodes selected for a mix of season variety and per-episode
-# class diversity (13-18 of the 20 intents present per episode) -- see the
-# design spec for the full table and reasoning.
+# 10 episodes, taking EVERY annotated clip in each (not a stratified sample),
+# selected for a mix of season variety and per-episode class diversity (13-18
+# of the 20 intents present per episode) -- see the design spec for the full
+# table and reasoning. "Every annotated clip" is still only ~8-10% of each
+# episode's actual clips; see the module docstring's caveat.
 SELECTED_EPISODES = [
     ("S04", "E16"), ("S04", "E04"), ("S04", "E01"),
     ("S05", "E19"), ("S05", "E18"), ("S05", "E20"),
@@ -177,7 +194,7 @@ def extract_frames(clip_path, sample_id):
 
 def main():
     print("=" * 70)
-    print("GENERATE DIALOGUE DATA (10 complete episodes)")
+    print("GENERATE DIALOGUE DATA (all annotated clips from 10 episodes)")
     print("=" * 70)
 
     episode_rows = load_episode_rows()
