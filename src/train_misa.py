@@ -173,7 +173,7 @@ def train_misa(train_tensors, val_tensors):
     text_val, audio_val, video_val, labels_val = val_tensors
 
     torch.manual_seed(SEED)
-    model = MISAModel(text_dim=text_train.shape[1], num_classes=20)
+    model = MISAModel(text_dim=text_train.shape[1], hidden_dim=HIDDEN_DIM, num_classes=20)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     best_val_f1 = -1.0
@@ -270,8 +270,13 @@ def main():
     print("  Concatenation fusion (M2): accuracy 0.117, macro-F1 0.096")
     print("  Text-only in this pipeline (M2 ablation): accuracy 0.383")
     print(f"  MISA (M3):                 accuracy {acc:.3f}, macro-F1 {macro_f1:.3f}")
-    print("Ask Claude Code: 'Did the shared/private decomposition actually help")
-    print("here, or does modality imbalance still win?'")
+    print("\nCareful with the credit, though: this script alone cannot tell you WHY")
+    print("MISA beats concatenation. Replacing a linear classifier with ANY small")
+    print("trainable network that learns its own per-modality scaling would also")
+    print("help, with or without the shared/private split. Separating the two needs")
+    print("a controlled ablation over several seeds -- Milestone 5's job.")
+    print("Ask Claude Code: 'How would I ablate the shared/private split to find out")
+    print("how much of this gain it is actually responsible for?'")
     print("=" * 70)
 
 

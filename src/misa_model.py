@@ -129,7 +129,12 @@ def similarity_loss(reps):
 
 def difference_loss(reps):
     """Push each modality's PRIVATE representation away from its own SHARED
-    representation, and away from other modalities' PRIVATE representations."""
+    representation, and away from other modalities' PRIVATE representations.
+
+    This is the orthogonality constraint from the glossary at the top of this
+    file: squared cosine similarity is 0 exactly when two vectors sit at 90
+    degrees to each other, so minimizing it pushes them toward orthogonal --
+    i.e. toward carrying unrelated information."""
 
     def cos_sq(a, b):
         a_norm = F.normalize(a, dim=-1)
