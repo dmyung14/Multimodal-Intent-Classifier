@@ -31,11 +31,26 @@ TERMS YOU'LL SEE (new ones, beyond what Milestone 0 introduced)
       then glue them end to end into one longer vector before the
       classifier ever sees them.
     - feature scaling: TF-IDF values are tiny (0-1ish), our fake audio
-      frequency is in the hundreds, and RGB values go up to 255. Fed in
-      raw, the biggest-magnitude numbers would unfairly dominate what the
-      classifier learns. StandardScaler rescales every feature to have
-      mean 0 and standard deviation 1 first, so no modality overpowers
-      the others just because its numbers happen to be bigger.
+      frequency is in the hundreds, and RGB values go up to 255.
+      StandardScaler rescales every feature to have mean 0 and standard
+      deviation 1 first, so no modality's weight in the classifier is
+      decided purely by how big its raw numbers happen to be. That's
+      usually the right default -- you rarely know in advance which
+      modality will turn out to carry the most signal, and without
+      scaling, whichever one has the largest raw numbers can dominate for
+      no good reason.
+      It isn't free, though. On this toy dataset the 6 audio+video
+      numbers happen to carry an almost perfect signal (video alone gets
+      near-100% accuracy), while the ~480 TF-IDF text dimensions are much
+      noisier. StandardScaler treats all of them as equally important by
+      construction, which here means diluting a strong, low-dimensional
+      signal by averaging it in with a lot of weak, high-dimensional
+      noise -- accuracy is measurably better WITHOUT scaling on this
+      particular data. We still scale by default below, because "which
+      modality is strongest" won't be known that clearly on real data --
+      but this is a good reminder to always check with an ablation rather
+      than assume. See notebooks/milestone2_toy_fusion.ipynb for that
+      ablation run live.
 """
 
 from pathlib import Path
