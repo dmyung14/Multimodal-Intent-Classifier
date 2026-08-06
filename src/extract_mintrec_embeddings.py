@@ -31,6 +31,19 @@ HOW TO RUN
     reused on future runs. Safe to re-run: samples that already have a
     cached embedding are skipped.
 
+IF YOU CHANGE A SETTING, DELETE THE CACHE FIRST
+    That "already cached, skip it" shortcut only looks at whether the .npz
+    file exists -- it has no idea WHICH settings produced it. So if you
+    change N_FRAMES in src/generate_mintrec_multimodal.py, or
+    AUDIO_SAMPLE_RATE there, or AUDIO_CKPT below, re-running is NOT enough:
+    Task 1 would rewrite the raw audio/frames, but this script would skip
+    every sample and leave you with embeddings computed under the OLD
+    settings, silently. Delete the cache first:
+
+        rm -r data/mintrec_multimodal/embeddings      # PowerShell: Remove-Item -Recurse
+
+    then re-run this script so every sample is embedded fresh.
+
 TERMS YOU'LL SEE
     - embedding        : a fixed-length list of numbers a neural network
                           produces to summarize its input -- the audio
@@ -93,11 +106,13 @@ def read_wav_as_array(wav_path):
 def embed_audio(wav_path, feature_extractor, model):
     audio = read_wav_as_array(wav_path)
     inputs = feature_extractor(audio, sampling_rate=16000, return_tensors="pt")
+    # Everything that touches the model's output stays inside no_grad, so no
+    # gradient bookkeeping happens at any point -- the safe habit to copy.
     with torch.no_grad():
         outputs = model(**inputs)
-    # outputs.last_hidden_state: (1, time_steps, 768) -- mean-pool over time
-    embedding = outputs.last_hidden_state.mean(dim=1).squeeze(0)
-    return embedding.numpy()
+        # outputs.last_hidden_state: (1, time_steps, 768) -- mean-pool over time
+        embedding = outputs.last_hidden_state.mean(dim=1).squeeze(0)
+        return embedding.numpy()
 
 
 def embed_video(frame_dir, model, transforms):

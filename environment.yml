@@ -15,10 +15,17 @@ dependencies:
   # ffmpeg is for pulling audio out of video clips later (Milestone 2)
   - ffmpeg
   - pip
-  # --- Milestone 1+ (heavier). Uncomment when you're ready, or just
-  #     `pip install` them later. They download a few hundred MB. ---
+  # --- Milestone 1+ (heavier, a few hundred MB of downloads) ---
+  #     The uncommented ones are REQUIRED by Milestone 2's real-data
+  #     pipeline (src/generate_mintrec_multimodal.py and
+  #     src/extract_mintrec_embeddings.py import them directly).
   - pip:
-    # - torch
-    # - transformers
+    - torch
+    - torchvision
+    - transformers
+    - huggingface_hub
+    - pillow
+    # Only needed for Milestone 1's OPTIONAL distilbert fine-tuning path
+    # (src/train_mintrec.py --finetune). Uncomment if you run that.
     # - datasets
     # - accelerate

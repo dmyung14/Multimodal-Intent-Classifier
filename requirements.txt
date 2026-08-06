@@ -4,8 +4,15 @@ pandas
 numpy
 scikit-learn
 matplotlib
-# Milestone 1+ (uncomment when ready):
-# torch
-# transformers
+# Milestone 1+ (heavier). Required by Milestone 2's real-data pipeline --
+# src/generate_mintrec_multimodal.py and src/extract_mintrec_embeddings.py
+# import these directly:
+torch
+torchvision
+transformers
+huggingface_hub
+pillow
+# Only for Milestone 1's OPTIONAL distilbert fine-tuning path
+# (src/train_mintrec.py --finetune). Uncomment if you run that:
 # datasets
 # accelerate
