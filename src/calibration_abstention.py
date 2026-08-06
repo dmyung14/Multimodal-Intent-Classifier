@@ -124,17 +124,37 @@ def expected_calibration_error(bin_df):
     return float((valid["count"] / total * (valid["mean_confidence"] - valid["accuracy"]).abs()).sum())
 
 
-def risk_coverage_sweep(confidences, correct, n_thresholds=21):
+def risk_coverage_sweep(confidences, correct, truth, n_thresholds=21):
+    """
+    truth: true labels for the same rows as confidences/correct (list or
+    array). For each threshold, in addition to the model's own accuracy on
+    the covered subset, this also computes that subset's OWN majority-class
+    baseline -- i.e. the accuracy you'd get by always guessing the single
+    most common true label among just the covered rows. A fixed, whole-test
+    baseline is misleading here because the covered subset shrinks and its
+    class mix can shift (e.g. become Inform-heavy) as the threshold rises,
+    so its own "doing nothing" baseline moves too.
+    """
+    truth_arr = np.asarray(truth)
     thresholds = np.linspace(0.0, 1.0, n_thresholds)
     rows = []
     for t in thresholds:
         covered = confidences >= t
         coverage = float(covered.mean())
-        if covered.sum() == 0:
-            rows.append({"threshold": t, "coverage": 0.0, "accuracy": np.nan, "risk": np.nan})
+        n_covered = int(covered.sum())
+        if n_covered == 0:
+            rows.append({
+                "threshold": t, "coverage": 0.0, "accuracy": np.nan, "risk": np.nan,
+                "subset_majority_acc": np.nan,
+            })
             continue
         acc = float(correct[covered].mean())
-        rows.append({"threshold": t, "coverage": coverage, "accuracy": acc, "risk": 1 - acc})
+        _, counts = np.unique(truth_arr[covered], return_counts=True)
+        subset_majority_acc = float(counts.max() / n_covered)
+        rows.append({
+            "threshold": t, "coverage": coverage, "accuracy": acc, "risk": 1 - acc,
+            "subset_majority_acc": subset_majority_acc,
+        })
     return pd.DataFrame(rows)
 
 
@@ -165,7 +185,7 @@ def main():
     print("\n" + "=" * 70)
     print("STEP 3  ABSTENTION: risk-coverage sweep")
     print("=" * 70)
-    rc_df = risk_coverage_sweep(confidences, correct)
+    rc_df = risk_coverage_sweep(confidences, correct, truth)
     print(rc_df.to_string(index=False))
 
     RESULTS_DIR.mkdir(exist_ok=True)
