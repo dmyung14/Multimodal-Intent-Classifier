@@ -2,13 +2,19 @@ import { useState } from "react";
 
 const BACKEND_URL = "http://localhost:8000";
 
-// Phase 1: only these 2 models are exported/served. Task 9 (Phase 2)
-// widens this to all 8 -- see
-// docs/superpowers/specs/2026-08-06-multimodal-intent-app-design.md.
 const MODEL_CHOICES = [
-  { id: "T", label: "Text-only (M5, accuracy 0.421)" },
-  { id: "MISA", label: "MISA text+audio+video fusion (M3, accuracy 0.333)" },
+  { id: "T", label: "Text only (M5) — accuracy 0.421" },
+  { id: "TA", label: "Text + Audio (M5) — accuracy 0.411" },
+  { id: "TV", label: "Text + Video (M5) — accuracy 0.336" },
+  { id: "TAV", label: "Text + Audio + Video, concatenated (M5) — accuracy 0.346" },
+  { id: "MISA", label: "Text + Audio + Video, MISA fusion (M3) — accuracy 0.333" },
+  { id: "AV", label: "Audio + Video, no text (M5) — accuracy 0.196" },
+  { id: "A", label: "Audio only (M5) — accuracy 0.150" },
+  { id: "V", label: "Video only (M5) — accuracy 0.112" },
 ];
+
+const NEEDS_TEXT = new Set(["T", "TA", "TV", "TAV", "MISA"]);
+const NEEDS_VIDEO = new Set(["A", "V", "TA", "TV", "AV", "TAV", "MISA"]);
 
 export default function Home() {
   const [modelChoice, setModelChoice] = useState("T");
@@ -48,14 +54,17 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 600, margin: "40px auto", fontFamily: "sans-serif" }}>
+    <main style={{ maxWidth: 640, margin: "48px auto", padding: "0 16px" }}>
       <h1>Multimodal Intent Inference</h1>
-      <p>
-        This pipeline has no speech-to-text: type what was said yourself,
-        even for models that also use audio/video.
+      <p className="muted">
+        Every model here is honestly labeled with its own real, measured
+        accuracy (Milestones 3 and 5) — text-only wins in every controlled
+        comparison this project has run so far. This pipeline has no
+        speech-to-text: type what was said yourself, even for models that
+        also use audio/video.
       </p>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="card" style={{ marginTop: 16 }}>
         <div style={{ marginBottom: 12 }}>
           <label>
             Model:{" "}
@@ -69,30 +78,34 @@ export default function Home() {
           </label>
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>
-            Text (what was said):
-            <br />
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={3}
-              style={{ width: "100%" }}
-            />
-          </label>
-        </div>
+        {NEEDS_TEXT.has(modelChoice) && (
+          <div style={{ marginBottom: 12 }}>
+            <label>
+              Text (what was said):
+              <br />
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={3}
+                style={{ width: "100%" }}
+              />
+            </label>
+          </div>
+        )}
 
-        <div style={{ marginBottom: 12 }}>
-          <label>
-            Video file (mp4/webm):
-            <br />
-            <input
-              type="file"
-              accept="video/mp4,video/webm"
-              onChange={(e) => setVideoFile(e.target.files[0] || null)}
-            />
-          </label>
-        </div>
+        {NEEDS_VIDEO.has(modelChoice) && (
+          <div style={{ marginBottom: 12 }}>
+            <label>
+              Video file (mp4/webm):
+              <br />
+              <input
+                type="file"
+                accept="video/mp4,video/webm"
+                onChange={(e) => setVideoFile(e.target.files[0] || null)}
+              />
+            </label>
+          </div>
+        )}
 
         <button type="submit" disabled={loading}>
           {loading ? "Predicting..." : "Predict intent"}
@@ -100,13 +113,13 @@ export default function Home() {
       </form>
 
       {error && (
-        <div style={{ marginTop: 20, color: "#b00020" }}>
+        <div className="error" style={{ marginTop: 20 }}>
           <strong>Error:</strong> {error}
         </div>
       )}
 
       {result && (
-        <div style={{ marginTop: 20 }}>
+        <div className="card" style={{ marginTop: 20 }}>
           <h2>Result</h2>
           <p>
             <strong>Predicted intent:</strong> {result.predicted_intent}
@@ -114,7 +127,7 @@ export default function Home() {
           <p>
             <strong>Confidence:</strong> {(result.confidence * 100).toFixed(1)}%
           </p>
-          <p style={{ color: "#666" }}>{result.explanation.calibration_caveat}</p>
+          <p className="muted">{result.explanation.calibration_caveat}</p>
           {result.explanation.top_words && (
             <div>
               <strong>Top contributing words:</strong>
