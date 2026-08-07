@@ -54,91 +54,105 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 640, margin: "48px auto", padding: "0 16px" }}>
+    <main className="shell">
+      <div className="kicker">Milestones 3 &amp; 5 — live inference</div>
       <h1>Multimodal Intent Inference</h1>
-      <p className="muted">
+      <p className="intro">
         Every model here is honestly labeled with its own real, measured
-        accuracy (Milestones 3 and 5) — text-only wins in every controlled
-        comparison this project has run so far. MISA&apos;s number comes from
-        a different, smaller test set with a different baseline than the
-        seven M5 combinations above it, so it isn&apos;t directly comparable
-        by raw accuracy — and audio-only/video-only are both worse than
-        always guessing the most common intent, not just weak. This pipeline
-        has no speech-to-text: type what was said yourself, even for models
+        accuracy — text-only wins in every controlled comparison this
+        project has run so far. MISA&apos;s number comes from a different,
+        smaller test set with a different baseline than the seven M5
+        combinations above it, so it isn&apos;t directly comparable by raw
+        accuracy — and audio-only/video-only are both worse than always
+        guessing the most common intent, not just weak. This pipeline has
+        no speech-to-text: type what was said yourself, even for models
         that also use audio/video.
       </p>
 
-      <form onSubmit={handleSubmit} className="card" style={{ marginTop: 16 }}>
-        <div style={{ marginBottom: 12 }}>
-          <label>
-            Model:{" "}
-            <select value={modelChoice} onChange={(e) => setModelChoice(e.target.value)}>
-              {MODEL_CHOICES.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+      <form onSubmit={handleSubmit} className="card">
+        <div className="field">
+          <label className="field-label" htmlFor="model-choice">
+            Model
           </label>
+          <select
+            id="model-choice"
+            value={modelChoice}
+            onChange={(e) => setModelChoice(e.target.value)}
+          >
+            {MODEL_CHOICES.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {NEEDS_TEXT.has(modelChoice) && (
-          <div style={{ marginBottom: 12 }}>
-            <label>
-              Text (what was said):
-              <br />
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                rows={3}
-                style={{ width: "100%" }}
-              />
+          <div className="field">
+            <label className="field-label" htmlFor="text-input">
+              Text (what was said)
             </label>
+            <textarea
+              id="text-input"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={3}
+            />
           </div>
         )}
 
         {NEEDS_VIDEO.has(modelChoice) && (
-          <div style={{ marginBottom: 12 }}>
-            <label>
-              Video file (mp4/webm):
-              <br />
-              <input
-                type="file"
-                accept="video/mp4,video/webm"
-                onChange={(e) => setVideoFile(e.target.files[0] || null)}
-              />
+          <div className="field">
+            <label className="field-label" htmlFor="video-input">
+              Video file (mp4/webm)
             </label>
+            <input
+              id="video-input"
+              type="file"
+              accept="video/mp4,video/webm"
+              onChange={(e) => setVideoFile(e.target.files[0] || null)}
+            />
           </div>
         )}
 
         <button type="submit" disabled={loading}>
-          {loading ? "Predicting..." : "Predict intent"}
+          {loading ? "Predicting…" : "Predict intent"}
         </button>
       </form>
 
       {error && (
         <div className="error" style={{ marginTop: 20 }}>
-          <strong>Error:</strong> {error}
+          <strong>Error</strong>
+          {error}
         </div>
       )}
 
       {result && (
         <div className="card" style={{ marginTop: 20 }}>
           <h2>Result</h2>
-          <p>
-            <strong>Predicted intent:</strong> {result.predicted_intent}
-          </p>
-          <p>
-            <strong>Confidence:</strong> {(result.confidence * 100).toFixed(1)}%
-          </p>
-          <p className="muted">{result.explanation.calibration_caveat}</p>
-          {result.explanation.top_words && (
-            <div>
-              <strong>Top contributing words:</strong>
-              <ul>
+          <p className="result-value">{result.predicted_intent}</p>
+
+          <div style={{ marginTop: 16 }}>
+            <div className="result-row">
+              <span className="k">Model</span>
+              <span className="v">{result.model_choice}</span>
+            </div>
+            <div className="result-row">
+              <span className="k">Confidence</span>
+              <span className="v">{(result.confidence * 100).toFixed(1)}%</span>
+            </div>
+          </div>
+
+          <p className="caveat">{result.explanation.calibration_caveat}</p>
+
+          {result.explanation.top_words && result.explanation.top_words.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <label className="field-label">Top contributing words</label>
+              <ul className="word-list">
                 {result.explanation.top_words.map((w) => (
                   <li key={w.word}>
-                    {w.word} ({w.weight.toFixed(3)})
+                    {w.word}
+                    <span className="weight">{w.weight.toFixed(3)}</span>
                   </li>
                 ))}
               </ul>
