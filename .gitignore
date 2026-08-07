@@ -14,6 +14,9 @@ data/*
 results/*
 !results/.gitkeep
 
+# skillui-extracted design references (scraped from third-party sites)
+chatgpt-design/
+
 # OS / editor cruft
 .DS_Store
 .vscode/
