@@ -3,14 +3,14 @@ import { useState } from "react";
 const BACKEND_URL = "http://localhost:8000";
 
 const MODEL_CHOICES = [
-  { id: "T", label: "Text only (M5) — accuracy 0.421" },
-  { id: "TA", label: "Text + Audio (M5) — accuracy 0.411" },
-  { id: "TV", label: "Text + Video (M5) — accuracy 0.336" },
-  { id: "TAV", label: "Text + Audio + Video, concatenated (M5) — accuracy 0.346" },
-  { id: "MISA", label: "Text + Audio + Video, MISA fusion (M3) — accuracy 0.333" },
-  { id: "AV", label: "Audio + Video, no text (M5) — accuracy 0.196" },
-  { id: "A", label: "Audio only (M5) — accuracy 0.150" },
-  { id: "V", label: "Video only (M5) — accuracy 0.112" },
+  { id: "T", label: "Text only (M5) — accuracy 0.421 (majority-class baseline 0.224)" },
+  { id: "TA", label: "Text + Audio (M5) — accuracy 0.411 (baseline 0.224)" },
+  { id: "TV", label: "Text + Video (M5) — accuracy 0.336 (baseline 0.224)" },
+  { id: "TAV", label: "Text + Audio + Video, concatenated (M5) — accuracy 0.346 (baseline 0.224)" },
+  { id: "AV", label: "Audio + Video, no text (M5) — accuracy 0.196 (baseline 0.224)" },
+  { id: "A", label: "Audio only (M5) — accuracy 0.150 — BELOW the 0.224 baseline (worse than always guessing)" },
+  { id: "V", label: "Video only (M5) — accuracy 0.112 — BELOW the 0.224 baseline (worse than always guessing)" },
+  { id: "MISA", label: "Text + Audio + Video, MISA fusion (M3) — accuracy 0.333 on a DIFFERENT, class-balanced test set (baseline 0.050) — not directly comparable to the M5 numbers above" },
 ];
 
 const NEEDS_TEXT = new Set(["T", "TA", "TV", "TAV", "MISA"]);
@@ -59,9 +59,13 @@ export default function Home() {
       <p className="muted">
         Every model here is honestly labeled with its own real, measured
         accuracy (Milestones 3 and 5) — text-only wins in every controlled
-        comparison this project has run so far. This pipeline has no
-        speech-to-text: type what was said yourself, even for models that
-        also use audio/video.
+        comparison this project has run so far. MISA&apos;s number comes from
+        a different, smaller test set with a different baseline than the
+        seven M5 combinations above it, so it isn&apos;t directly comparable
+        by raw accuracy — and audio-only/video-only are both worse than
+        always guessing the most common intent, not just weak. This pipeline
+        has no speech-to-text: type what was said yourself, even for models
+        that also use audio/video.
       </p>
 
       <form onSubmit={handleSubmit} className="card" style={{ marginTop: 16 }}>

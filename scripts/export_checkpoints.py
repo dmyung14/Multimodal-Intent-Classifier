@@ -32,27 +32,14 @@ from sklearn.metrics import accuracy_score, f1_score
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
+sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
 import modality_ablation as ma  # noqa: E402
 import train_misa as tm  # noqa: E402
 from misa_model import MISAModel  # noqa: E402
+from expected_results import EXPECTED, TOLERANCE  # noqa: E402
 
 MODELS_DIR = PROJECT_ROOT / "models"
-
-# Real, already-recorded numbers this export must reproduce (see this
-# plan's Global Constraints table -- source: results/modality_ablation.csv
-# and CLAUDE.md).
-EXPECTED = {
-    "T": {"accuracy": 0.4206, "macro_f1": 0.2941},
-    "A": {"accuracy": 0.1495, "macro_f1": 0.0687},
-    "V": {"accuracy": 0.1121, "macro_f1": 0.0361},
-    "TA": {"accuracy": 0.4112, "macro_f1": 0.2466},
-    "TV": {"accuracy": 0.3364, "macro_f1": 0.2537},
-    "AV": {"accuracy": 0.1963, "macro_f1": 0.0959},
-    "TAV": {"accuracy": 0.3458, "macro_f1": 0.2083},
-    "MISA": {"accuracy": 0.333, "macro_f1": 0.295},
-}
-TOLERANCE = 0.005
 
 
 def _verify(name, acc, macro_f1):
@@ -99,7 +86,17 @@ def export_lr_combo(combo):
     MODELS_DIR.mkdir(exist_ok=True)
     out_path = MODELS_DIR / f"lr_{combo}.joblib"
     saved_tfidf = tfidf if "T" in combo else None
-    joblib.dump({"combo": combo, "tfidf": saved_tfidf, "scaler": scaler, "clf": clf}, out_path)
+    joblib.dump(
+        {
+            "combo": combo,
+            "tfidf": saved_tfidf,
+            "scaler": scaler,
+            "clf": clf,
+            "accuracy": acc,
+            "macro_f1": macro_f1,
+        },
+        out_path,
+    )
     print(f"Saved {out_path.relative_to(PROJECT_ROOT)} (accuracy={acc:.4f}, macro_f1={macro_f1:.4f})\n")
 
 
@@ -134,6 +131,8 @@ def export_misa():
             "text_dim": text_train.shape[1],
             "hidden_dim": tm.HIDDEN_DIM,
             "num_classes": len(labels_sorted),
+            "accuracy": acc,
+            "macro_f1": macro_f1,
         },
         out_path,
     )

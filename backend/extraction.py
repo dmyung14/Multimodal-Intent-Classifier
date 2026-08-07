@@ -50,27 +50,43 @@ def load_encoders():
 
 def _extract_audio_wav(clip_path, work_dir):
     out_path = Path(work_dir) / "audio.wav"
-    subprocess.run(
-        [
-            "ffmpeg", "-y", "-i", str(clip_path),
-            "-ar", str(AUDIO_SAMPLE_RATE), "-ac", "1", "-vn",
-            "-c:a", "pcm_s16le",
-            str(out_path),
-        ],
-        check=True, capture_output=True,
-    )
+    try:
+        subprocess.run(
+            [
+                "ffmpeg", "-y", "-i", str(clip_path),
+                "-ar", str(AUDIO_SAMPLE_RATE), "-ac", "1", "-vn",
+                "-c:a", "pcm_s16le",
+                str(out_path),
+            ],
+            check=True, capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.decode(errors="replace") if exc.stderr else "(no stderr captured)"
+        raise RuntimeError(f"ffmpeg failed while extracting audio: {stderr.strip()}") from exc
     return out_path
 
 
 def _get_duration_seconds(clip_path):
-    result = subprocess.run(
-        [
-            "ffprobe", "-v", "error", "-show_entries", "format=duration",
-            "-of", "csv=p=0", str(clip_path),
-        ],
-        check=True, capture_output=True, text=True,
-    )
-    return float(result.stdout.strip())
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "csv=p=0", str(clip_path),
+            ],
+            check=True, capture_output=True, text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip() if exc.stderr else "(no stderr captured)"
+        raise RuntimeError(f"ffprobe failed while reading video duration: {stderr}") from exc
+
+    duration_str = result.stdout.strip()
+    if duration_str == "N/A" or not duration_str:
+        raise RuntimeError(
+            "Could not read this video's duration (ffprobe returned no duration — "
+            "common for some .webm recordings). Try re-encoding it to mp4 first, "
+            "e.g.: ffmpeg -i input.webm output.mp4"
+        )
+    return float(duration_str)
 
 
 def _extract_frames(clip_path, work_dir):
@@ -80,13 +96,17 @@ def _extract_frames(clip_path, work_dir):
     for i in range(N_FRAMES):
         timestamp = duration * (i + 0.5) / N_FRAMES
         frame_path = frame_dir / f"frame_{i}.jpg"
-        subprocess.run(
-            [
-                "ffmpeg", "-y", "-ss", f"{timestamp:.3f}", "-i", str(clip_path),
-                "-frames:v", "1", str(frame_path),
-            ],
-            check=True, capture_output=True,
-        )
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-ss", f"{timestamp:.3f}", "-i", str(clip_path),
+                    "-frames:v", "1", str(frame_path),
+                ],
+                check=True, capture_output=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr.decode(errors="replace") if exc.stderr else "(no stderr captured)"
+            raise RuntimeError(f"ffmpeg failed while extracting frame {i}: {stderr.strip()}") from exc
     return frame_dir
 
 
