@@ -80,3 +80,31 @@ def test_misa_happy_path(client):
     assert isinstance(body["predicted_intent"], str)
     assert 0.0 <= body["confidence"] <= 1.0
     assert body["explanation"]["top_words"] is None  # MISA has no word attribution
+
+
+def test_v_combo_happy_path(client):
+    with open(FIXTURE_CLIP, "rb") as f:
+        response = client.post(
+            "/predict",
+            data={"model_choice": "V"},
+            files={"video": ("374.mp4", f, "video/mp4")},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["model_choice"] == "V"
+    assert isinstance(body["predicted_intent"], str)
+    assert body["explanation"]["top_words"] is None  # no text in this combo
+
+
+def test_tav_combo_happy_path(client):
+    with open(FIXTURE_CLIP, "rb") as f:
+        response = client.post(
+            "/predict",
+            data={"model_choice": "TAV", "text": "I guess we should get going now"},
+            files={"video": ("374.mp4", f, "video/mp4")},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["model_choice"] == "TAV"
+    assert isinstance(body["predicted_intent"], str)
+    assert body["explanation"]["top_words"] is not None

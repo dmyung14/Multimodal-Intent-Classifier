@@ -18,10 +18,8 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from misa_model import MISAModel  # noqa: E402
 
-# Phase 1: only "T" is exported/served. Phase 2 (Task 8) extends this to
-# all 7 of M5's modality combinations -- everything else about this file
-# stays the same, this list is the only thing that grows.
-LR_COMBOS = ["T"]
+# Phase 2: all 7 of M5's modality combinations are now exported/served.
+LR_COMBOS = ["T", "A", "V", "TA", "TV", "AV", "TAV"]
 
 MODEL_REQUIREMENTS = {
     "T": {"needs_text": True, "needs_video": False},
