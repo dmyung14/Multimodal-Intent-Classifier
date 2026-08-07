@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.registry import load_registry, MODEL_REQUIREMENTS
-from backend.extraction import load_encoders, extract_live_features
+from backend.extraction import load_encoders, extract_live_features, extract_audio_only, extract_video_only
 from backend.inference import predict
 from backend.explanation import build_explanation
 
@@ -47,6 +47,7 @@ app.add_middleware(
 async def predict_endpoint(
     model_choice: str = Form(...),
     text: Optional[str] = Form(None),
+    audio: Optional[UploadFile] = File(None),
     video: Optional[UploadFile] = File(None),
 ):
     if model_choice not in STATE["registry"]:
@@ -59,31 +60,58 @@ async def predict_endpoint(
         )
 
     requirements = MODEL_REQUIREMENTS[model_choice]
+    needs_audio = requirements["needs_audio"]
+    needs_video = requirements["needs_video"]
+
     if requirements["needs_text"] and not text:
         return JSONResponse(
             status_code=400,
             content={"error": f"model_choice '{model_choice}' requires text input."},
         )
-    if requirements["needs_video"] and video is None:
+    if needs_audio and needs_video and video is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": f"model_choice '{model_choice}' requires a video file upload "
+                "(audio and video are both extracted from it)."
+            },
+        )
+    if needs_audio and not needs_video and audio is None:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"model_choice '{model_choice}' requires an audio file upload."},
+        )
+    if needs_video and not needs_audio and video is None:
         return JSONResponse(
             status_code=400,
             content={"error": f"model_choice '{model_choice}' requires a video file upload."},
         )
 
     live_features = None
-    if requirements["needs_video"]:
+    if needs_audio or needs_video:
         work_dir = Path(tempfile.mkdtemp(prefix="mmi_predict_"))
         try:
-            video_path = work_dir / "upload.mp4"
-            with open(video_path, "wb") as f:
-                shutil.copyfileobj(video.file, f)
-            try:
+            if needs_audio and needs_video:
+                video_path = work_dir / "upload.mp4"
+                with open(video_path, "wb") as f:
+                    shutil.copyfileobj(video.file, f)
                 live_features = extract_live_features(video_path, STATE["encoders"], work_dir)
-            except Exception as exc:
-                return JSONResponse(
-                    status_code=400,
-                    content={"error": f"Failed to process uploaded video: {exc}"},
-                )
+            elif needs_audio:
+                audio_path = work_dir / "upload_audio"
+                with open(audio_path, "wb") as f:
+                    shutil.copyfileobj(audio.file, f)
+                live_features = {"audio": extract_audio_only(audio_path, STATE["encoders"], work_dir)}
+            else:
+                video_path = work_dir / "upload.mp4"
+                with open(video_path, "wb") as f:
+                    shutil.copyfileobj(video.file, f)
+                live_features = {"video": extract_video_only(video_path, STATE["encoders"], work_dir)}
+        except Exception as exc:
+            kind = "audio" if (needs_audio and not needs_video) else "video"
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Failed to process uploaded {kind}: {exc}"},
+            )
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
 

@@ -156,3 +156,28 @@ def extract_live_features(video_path, encoders, work_dir):
         frame_dir, encoders["video_model"], encoders["video_transforms"]
     )
     return {"audio": audio_embedding, "video": video_embedding}
+
+
+def extract_audio_only(audio_path, encoders, work_dir):
+    """
+    audio_path: Path to an uploaded standalone audio file (wav/mp3/m4a/ogg/
+                anything ffmpeg can decode -- _extract_audio_wav's ffmpeg
+                call works on a bare audio file exactly as it does on a
+                video's audio track, no video stream required).
+    encoders: dict returned by load_encoders().
+    work_dir: scratch directory for this request's intermediate WAV file.
+    Returns: np.ndarray(768,)
+    """
+    wav_path = _extract_audio_wav(audio_path, work_dir)
+    return _embed_audio(wav_path, encoders["audio_feature_extractor"], encoders["audio_model"])
+
+
+def extract_video_only(video_path, encoders, work_dir):
+    """
+    video_path: Path to an uploaded mp4/webm file.
+    encoders: dict returned by load_encoders().
+    work_dir: scratch directory for this request's intermediate JPEG frames.
+    Returns: np.ndarray(512,)
+    """
+    frame_dir = _extract_frames(video_path, work_dir)
+    return _embed_video(frame_dir, encoders["video_model"], encoders["video_transforms"])

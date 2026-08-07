@@ -27,14 +27,14 @@ except ImportError:
 LR_COMBOS = ["T", "A", "V", "TA", "TV", "AV", "TAV"]
 
 MODEL_REQUIREMENTS = {
-    "T": {"needs_text": True, "needs_video": False},
-    "A": {"needs_text": False, "needs_video": True},
-    "V": {"needs_text": False, "needs_video": True},
-    "TA": {"needs_text": True, "needs_video": True},
-    "TV": {"needs_text": True, "needs_video": True},
-    "AV": {"needs_text": False, "needs_video": True},
-    "TAV": {"needs_text": True, "needs_video": True},
-    "MISA": {"needs_text": True, "needs_video": True},
+    "T": {"needs_text": True, "needs_audio": False, "needs_video": False},
+    "A": {"needs_text": False, "needs_audio": True, "needs_video": False},
+    "V": {"needs_text": False, "needs_audio": False, "needs_video": True},
+    "TA": {"needs_text": True, "needs_audio": True, "needs_video": False},
+    "TV": {"needs_text": True, "needs_audio": False, "needs_video": True},
+    "AV": {"needs_text": False, "needs_audio": True, "needs_video": True},
+    "TAV": {"needs_text": True, "needs_audio": True, "needs_video": True},
+    "MISA": {"needs_text": True, "needs_audio": True, "needs_video": True},
 }
 
 

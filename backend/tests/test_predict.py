@@ -11,6 +11,8 @@ HOW TO RUN
     python scripts/export_checkpoints.py   # once, if not already done
     pytest backend/tests/test_predict.py -v
 """
+import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -26,6 +28,21 @@ FIXTURE_CLIP = PROJECT_ROOT / "data" / "dialogue" / "raw_clips" / "S04" / "E04" 
 def client():
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture(scope="module")
+def fixture_audio_wav():
+    """A standalone WAV file (no video track), extracted once from the
+    fixture clip's own audio -- proves the audio-only upload path works
+    on a genuinely bare audio file, not just a video's audio track."""
+    with tempfile.TemporaryDirectory() as tmp:
+        wav_path = Path(tmp) / "fixture_audio.wav"
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(FIXTURE_CLIP), "-ar", "16000", "-ac", "1", "-vn",
+             "-c:a", "pcm_s16le", str(wav_path)],
+            check=True, capture_output=True,
+        )
+        yield wav_path
 
 
 def test_missing_model_choice_returns_422(client):
@@ -94,6 +111,43 @@ def test_v_combo_happy_path(client):
     assert body["model_choice"] == "V"
     assert isinstance(body["predicted_intent"], str)
     assert body["explanation"]["top_words"] is None  # no text in this combo
+
+
+def test_a_combo_missing_audio_returns_400(client):
+    response = client.post("/predict", data={"model_choice": "A"})
+    assert response.status_code == 400
+    assert "requires an audio file" in response.json()["error"]
+
+
+def test_a_combo_happy_path_standalone_audio(client, fixture_audio_wav):
+    """'A' needs no text/video -- only a bare audio file, not a video's audio track."""
+    with open(fixture_audio_wav, "rb") as f:
+        response = client.post(
+            "/predict",
+            data={"model_choice": "A"},
+            files={"audio": ("fixture_audio.wav", f, "audio/wav")},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["model_choice"] == "A"
+    assert isinstance(body["predicted_intent"], str)
+    assert 0.0 <= body["confidence"] <= 1.0
+    assert body["explanation"]["top_words"] is None  # no text in this combo
+
+
+def test_ta_combo_happy_path_standalone_audio(client, fixture_audio_wav):
+    """'TA' needs text + audio only -- no video field should be required."""
+    with open(fixture_audio_wav, "rb") as f:
+        response = client.post(
+            "/predict",
+            data={"model_choice": "TA", "text": "I guess we should get going now"},
+            files={"audio": ("fixture_audio.wav", f, "audio/wav")},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["model_choice"] == "TA"
+    assert isinstance(body["predicted_intent"], str)
+    assert body["explanation"]["top_words"] is not None  # text-involving combo
 
 
 def test_tav_combo_happy_path(client):

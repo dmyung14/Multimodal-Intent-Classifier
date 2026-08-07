@@ -14,11 +14,18 @@ const MODEL_CHOICES = [
 ];
 
 const NEEDS_TEXT = new Set(["T", "TA", "TV", "TAV", "MISA"]);
-const NEEDS_VIDEO = new Set(["A", "V", "TA", "TV", "AV", "TAV", "MISA"]);
+// Combos needing only audio accept a standalone audio file; combos needing
+// only video (or needing both, since audio+video are extracted from the
+// same clip) accept a video file -- mirrors backend/registry.py's
+// MODEL_REQUIREMENTS exactly.
+const NEEDS_AUDIO_ONLY = new Set(["A", "TA"]);
+const NEEDS_VIDEO_ONLY = new Set(["V", "TV"]);
+const NEEDS_BOTH = new Set(["AV", "TAV", "MISA"]);
 
 export default function Home() {
   const [modelChoice, setModelChoice] = useState("T");
   const [text, setText] = useState("");
+  const [audioFile, setAudioFile] = useState(null);
   const [videoFile, setVideoFile] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -33,6 +40,7 @@ export default function Home() {
     const formData = new FormData();
     formData.append("model_choice", modelChoice);
     if (text) formData.append("text", text);
+    if (audioFile) formData.append("audio", audioFile);
     if (videoFile) formData.append("video", videoFile);
 
     try {
@@ -55,7 +63,6 @@ export default function Home() {
 
   return (
     <main className="shell">
-      <div className="kicker">Milestones 3 &amp; 5 — live inference</div>
       <h1>Multimodal Intent Inference</h1>
       <p className="intro">
         Every model here is honestly labeled with its own real, measured
@@ -101,7 +108,21 @@ export default function Home() {
           </div>
         )}
 
-        {NEEDS_VIDEO.has(modelChoice) && (
+        {NEEDS_AUDIO_ONLY.has(modelChoice) && (
+          <div className="field">
+            <label className="field-label" htmlFor="audio-input">
+              Audio file (wav/mp3/m4a/etc.)
+            </label>
+            <input
+              id="audio-input"
+              type="file"
+              accept="audio/*"
+              onChange={(e) => setAudioFile(e.target.files[0] || null)}
+            />
+          </div>
+        )}
+
+        {(NEEDS_VIDEO_ONLY.has(modelChoice) || NEEDS_BOTH.has(modelChoice)) && (
           <div className="field">
             <label className="field-label" htmlFor="video-input">
               Video file (mp4/webm)
@@ -115,7 +136,7 @@ export default function Home() {
           </div>
         )}
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" disabled={loading} style={{ marginTop: 6 }}>
           {loading ? "Predicting…" : "Predict intent"}
         </button>
       </form>
