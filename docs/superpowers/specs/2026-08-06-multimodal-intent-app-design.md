@@ -62,6 +62,12 @@ None of M0-M5's scripts save trained weights — every "train" script retrains f
 
 Output lands in `models/` (already a project directory, git-ignored, previously only holding an unrelated `distilbert_intent` experiment).
 
+**Determinism, explicit:** M0-M5 have used fixed seeds throughout (`modality_ablation.py`: `SEED = 0`, `LogisticRegression(random_state=SEED)`; `train_misa.py`: `SEED = 0` for `torch.manual_seed`, `random_state=42` for both `train_test_split` calls). `export_checkpoints.py` must call those scripts' existing `load_data`/`split_data`/training functions **exactly as they already exist** — same seeded calls, no reimplementation — so a re-export reproduces the identical split and identical trained weights, not a silently different model than the one M3/M5 actually reported. As a concrete guard, not just a convention to trust: the export script's own smoke test re-runs each exported checkpoint through its original `evaluate()` function and asserts the resulting accuracy/macro-F1 match the already-recorded M3/M5 numbers (e.g. MISA 0.333/0.295, M5's T combo 0.421/0.294) to the same precision reported in `CLAUDE.md` — if a re-export ever produces a different number, that assertion fails loudly instead of silently serving a different model than the one the app claims to.
+
+**Implementation-time risks to verify (flagged now, not blocking approval):**
+- **CORS**: the Next.js dev server and FastAPI backend run on different local ports — the backend needs an explicit CORS policy (e.g. `fastapi.middleware.cors.CORSMiddleware` allowing the frontend's origin) or the browser will silently reject the API calls.
+- **MISA embedding-dimension consistency**: MISA's checkpoint is trained on M2's pooled embeddings (`audio_dim=768`, `video_dim=512`, mean-pooled — see `src/misa_model.py`'s constructor defaults). The backend's *live* extraction (reusing `src/extract_mintrec_embeddings.py`) must produce embeddings of the identical shape and pooling for a freshly uploaded clip. Before wiring this into the API, run one live extraction and diff its shape/rough magnitude against one of M2's already-cached `.npz` files as a sanity check, rather than assuming the live path matches.
+
 ### Backend: `backend/app.py` (new)
 
 FastAPI app. Loads all 8 checkpoints into memory once at startup — refuses to start with a clear pointer to `python scripts/export_checkpoints.py` if any are missing (same "fail loud with a fix command" convention as every M0-M5 script). One endpoint: `POST /predict`.
@@ -82,6 +88,15 @@ Next.js/React, styled from the `chatgpt-design` skill's extracted tokens (light 
 This is the project's first real application code, not a training script — a step up from M0-M5's "run it, read the output" convention is warranted:
 - Backend: FastAPI `TestClient` tests on `/predict` — one per input-validation error case (missing text, missing file when required, bad file), one happy-path test per model family (one M5 combo, MISA) using a small fixture clip.
 - Frontend: manual verification in a real browser (start the dev server, exercise the golden path and at least one error case), per this project's global CLAUDE.md UI-testing rule — no automated frontend tests for v1.
+
+## Build phasing
+
+Rather than exporting all 8 checkpoints and building the full 8-model frontend in one shot, this is built as a vertical slice first, then widened — proves the whole path (export → live extraction → serving → UI) works end to end on a small, cheap slice before paying for the rest:
+
+- **Phase 1 (minimum working slice):** export just 2 checkpoints — M5's best combo (T) and M3's MISA (the two that between them exercise both the text-only path and the full audio/video-extraction + neural-net path). Backend serves only those 2. Frontend is a minimal single-page form (no full model-picker UI yet) — enough to submit a request and see a real result rendered, proving text input, file upload, live extraction, and both explanation types (word attribution for T, calibration-only for MISA) all genuinely work.
+- **Phase 2 (widen):** export the remaining 6 of M5's combos, add the full 8-option model picker to the frontend, apply the `chatgpt-design` visual system in full.
+
+Phase 1 is a real, demoable, testable app on its own — Phase 2 is additive, not a rework.
 
 ## Explicitly out of scope for v1
 
