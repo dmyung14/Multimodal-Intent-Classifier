@@ -44,6 +44,12 @@ MODELS_DIR = PROJECT_ROOT / "models"
 # and CLAUDE.md).
 EXPECTED = {
     "T": {"accuracy": 0.4206, "macro_f1": 0.2941},
+    "A": {"accuracy": 0.1495, "macro_f1": 0.0687},
+    "V": {"accuracy": 0.1121, "macro_f1": 0.0361},
+    "TA": {"accuracy": 0.4112, "macro_f1": 0.2466},
+    "TV": {"accuracy": 0.3364, "macro_f1": 0.2537},
+    "AV": {"accuracy": 0.1963, "macro_f1": 0.0959},
+    "TAV": {"accuracy": 0.3458, "macro_f1": 0.2083},
     "MISA": {"accuracy": 0.333, "macro_f1": 0.295},
 }
 TOLERANCE = 0.005
@@ -135,10 +141,11 @@ def export_misa():
 
 
 def main():
-    export_lr_combo("T")
+    for combo in ["T", "A", "V", "TA", "TV", "AV", "TAV"]:
+        export_lr_combo(combo)
     export_misa()
     print("=" * 70)
-    print("DONE. Both checkpoints verified and saved to models/.")
+    print("DONE. All 8 checkpoints verified and saved to models/.")
     print("=" * 70)
 
 
