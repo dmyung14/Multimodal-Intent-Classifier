@@ -136,7 +136,7 @@ export default function Home() {
           </div>
         )}
 
-        <button type="submit" disabled={loading} style={{ marginTop: 6 }}>
+        <button type="submit" disabled={loading} style={{ marginTop: 16 }}>
           {loading ? "Predicting…" : "Predict intent"}
         </button>
       </form>
